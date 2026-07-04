@@ -1,0 +1,13 @@
+# 빌드 산출물
+/qrgen
+/ferryman
+/dist/
+
+# IDE / 로컬 오케스트레이션 상태
+/.idea/
+*.iml
+/.omc/
+
+# 임시/테스트 출력
+*.png
+!docs/**/*.png
