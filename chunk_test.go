@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 )
@@ -46,6 +47,38 @@ func TestSinglePayloadIsRaw(t *testing.T) {
 	}
 	if payloads[0] != content {
 		t.Fatalf("단일 QR 이 원문과 다름: %q", payloads[0])
+	}
+}
+
+// TestBytesPerQRClamped 는 상한을 넘는 값이 maxBytesPerQR 로 잘려
+// 각 조각의 원문이 상한 이하로 유지되는지 확인한다.
+func TestBytesPerQRClamped(t *testing.T) {
+	content := strings.Repeat("가", 1000) // 3000 바이트
+	// 상한(700)을 크게 넘는 값을 요청해도 조각당 원문은 700 이하여야 한다.
+	payloads := splitPayloads(content, 5000)
+	if len(payloads) < 2 {
+		t.Fatalf("클램프 후에도 분할되어야 함: %d", len(payloads))
+	}
+	for i, p := range payloads {
+		part, ok := parsePart(p)
+		if !ok {
+			t.Fatalf("조각 %d 헤더 파싱 실패", i)
+		}
+		raw, err := base64.StdEncoding.DecodeString(part.data)
+		if err != nil {
+			t.Fatalf("조각 %d base64 실패: %v", i, err)
+		}
+		if len(raw) > maxBytesPerQR {
+			t.Fatalf("조각 %d 원문 %d바이트 > 상한 %d", i, len(raw), maxBytesPerQR)
+		}
+	}
+	// 클램프해도 왕복은 정확해야 한다.
+	got, err := reassemble(payloads)
+	if err != nil {
+		t.Fatalf("reassemble 실패: %v", err)
+	}
+	if got != content {
+		t.Fatal("클램프 후 원문 불일치")
 	}
 }
 
