@@ -52,7 +52,7 @@ func printUsage() {
 인코딩 옵션:
   -i     입력 파일 경로 (txt/md 등). 지정 시 파일 내용을 인코딩
   -o     PNG 출력 파일명 (미지정 시 터미널 출력)
-  -chunk 조각당 base64 문자 수 (기본 1000, 길면 여러 QR 로 분할)
+  -bytes QR 1개당 원문 바이트 수 (기본 500, 최대 700). 줄이면 QR 이 작고 장수↑, 스캔 쉬움
   -level 오류정정 레벨 l|m|h|x (기본 l = 용량 우선)
   -scale PNG 모듈당 픽셀 (기본 8)
 `)
@@ -64,7 +64,7 @@ func encodeCmd(args []string) {
 	fs := flag.NewFlagSet("encode", flag.ExitOnError)
 	in := fs.String("i", "", "입력 파일 경로 (txt/md 등)")
 	out := fs.String("o", "", "PNG 출력 파일명 (미지정 시 터미널 출력)")
-	chunk := fs.Int("chunk", defaultChunk, "조각당 base64 문자 수")
+	bytesPerQR := fs.Int("bytes", defaultBytesPerQR, "QR 1개당 원문 바이트 수")
 	level := fs.String("level", "l", "오류정정 레벨 l|m|h|x")
 	scale := fs.Int("scale", 8, "PNG 모듈당 픽셀 수")
 	fs.Parse(args)
@@ -77,8 +77,11 @@ func encodeCmd(args []string) {
 		fmt.Fprintln(os.Stderr, "입력 텍스트가 없습니다.")
 		os.Exit(2)
 	}
+	if *bytesPerQR > maxBytesPerQR {
+		fmt.Fprintf(os.Stderr, "알림: -bytes 는 최대 %d 까지만 안전합니다. %d 로 조정합니다.\n", maxBytesPerQR, maxBytesPerQR)
+	}
 
-	codes, err := encodeAll(text, *chunk, recoveryLevel(*level))
+	codes, err := encodeAll(text, *bytesPerQR, recoveryLevel(*level))
 	if err != nil {
 		fatal(err)
 	}
