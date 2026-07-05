@@ -24,13 +24,15 @@ func recoveryLevel(s string) qrcode.RecoveryLevel {
 }
 
 // encodeAll 은 원문을 필요한 만큼 분할해 QR 코드 객체들로 만든다.
-func encodeAll(content string, chunkSize int, level qrcode.RecoveryLevel) ([]*qrcode.QRCode, error) {
-	payloads := splitPayloads(content, chunkSize)
+// bytesPerQR 는 QR 1개당 원문 바이트 수(사용자 조절값)다.
+func encodeAll(content string, bytesPerQR int, level qrcode.RecoveryLevel) ([]*qrcode.QRCode, error) {
+	payloads := splitPayloads(content, bytesPerQR)
 	codes := make([]*qrcode.QRCode, 0, len(payloads))
 	for _, p := range payloads {
 		q, err := qrcode.New(p, level)
 		if err != nil {
-			return nil, err
+			// 대개 조각 하나가 QR 용량을 넘긴 경우 — 값을 줄이도록 안내한다.
+			return nil, fmt.Errorf("QR 용량 초과: -bytes 값을 줄이세요(권장 100~%d): %w", maxBytesPerQR, err)
 		}
 		codes = append(codes, q)
 	}

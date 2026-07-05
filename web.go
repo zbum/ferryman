@@ -36,7 +36,7 @@ const encodeForm = `
 <form method="post" action="/encode">
 <textarea name="text" placeholder="QR 로 만들 텍스트를 입력하세요">%s</textarea>
 <div class="opts">
-  <label>조각당 크기 <input type="number" name="chunk" value="%d" min="100" max="2900"></label>
+  <label>QR 1개당 바이트 <input type="number" name="bytes" value="%d" min="100" max="700"></label>
   &nbsp; <label>모듈당 픽셀 <input type="number" name="scale" value="%d" min="2" max="16"></label>
 </div>
 <button type="submit">QR 생성</button>
@@ -67,7 +67,7 @@ func serve(addr string) error {
 
 func writePage(w io.Writer, prefill string, body string) {
 	io.WriteString(w, pageTop)
-	fmt.Fprintf(w, encodeForm, html.EscapeString(prefill), defaultChunk, 6)
+	fmt.Fprintf(w, encodeForm, html.EscapeString(prefill), defaultBytesPerQR, 6)
 	io.WriteString(w, decodeForm)
 	io.WriteString(w, body)
 	io.WriteString(w, pageBottom)
@@ -80,7 +80,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func handleEncode(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
-	chunk := atoiDefault(r.FormValue("chunk"), defaultChunk)
+	bytesPerQR := atoiDefault(r.FormValue("bytes"), defaultBytesPerQR)
 	scale := atoiDefault(r.FormValue("scale"), 6)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -89,7 +89,7 @@ func handleEncode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	codes, err := encodeAll(text, chunk, recoveryLevel("l"))
+	codes, err := encodeAll(text, bytesPerQR, recoveryLevel("l"))
 	if err != nil {
 		writePage(w, text, "<p>오류: "+html.EscapeString(err.Error())+"</p>")
 		return
